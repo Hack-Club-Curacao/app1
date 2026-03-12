@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 192" width="192" height="192">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0044ff"/>
+      <stop offset="50%" style="stop-color:#00c8ff"/>
+      <stop offset="100%" style="stop-color:#7b2fff"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:rgba(255,255,255,0.3)"/>
+      <stop offset="100%" style="stop-color:rgba(255,255,255,0)"/>
+    </linearGradient>
+  </defs>
+  <!-- Background -->
+  <rect width="192" height="192" rx="42" fill="url(#bg)"/>
+  <!-- Shine overlay -->
+  <rect width="192" height="192" rx="42" fill="url(#shine)"/>
+  <!-- Grid lines for tactical feel -->
+  <line x1="96" y1="20" x2="96" y2="172" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+  <line x1="20" y1="96" x2="172" y2="96" stroke="rgba(255,255,255,0.08)" stroke-width="1"/>
+  <!-- Outer ring -->
+  <circle cx="96" cy="96" r="68" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="1.5"/>
+  <!-- Inner ring -->
+  <circle cx="96" cy="96" r="48" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
+  <!-- Diamond shape -->
+  <polygon points="96,34 140,96 96,158 52,96" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="3" stroke-linejoin="round"/>
+  <!-- Inner diamond -->
+  <polygon points="96,58 118,96 96,134 74,96" fill="rgba(255,255,255,0.15)" stroke="rgba(255,255,255,0.9)" stroke-width="2" stroke-linejoin="round"/>
+  <!-- Center dot -->
+  <circle cx="96" cy="96" r="8" fill="white"/>
+  <!-- ION text -->
+  <text x="96" y="188" font-family="'Barlow Condensed', sans-serif" font-weight="900" font-size="0" fill="white" text-anchor="middle" letter-spacing="4">ION</text>
+</svg>
