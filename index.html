@@ -1,0 +1,1938 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/>
+<meta name="theme-color" id="meta-theme" content="#080a14"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="ION"/>
+<meta name="description" content="ION — Tactical Navigation System · CuraHack Curaçao"/>
+<title>ION</title>
+<link rel="manifest" href="manifest.json"/>
+<link rel="apple-touch-icon" href="icons/ion-icon-192.svg"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=DM+Sans:wght@300;400;500;600&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<style>
+/* ══════════════════════════════════════════════
+   ION — DESIGN SYSTEM
+══════════════════════════════════════════════ */
+:root {
+  --bg:          #07090f;
+  --bg2:         #0b0e1a;
+  --surface:     #0f1220;
+  --surface2:    #141828;
+  --surface3:    #1a2035;
+  --border:      rgba(255,140,0,0.12);
+  --border2:     rgba(255,255,255,0.06);
+  --accent:      #ff7a00;
+  --accent-glow: rgba(255,122,0,0.35);
+  --accent-dim:  rgba(255,122,0,0.12);
+  --blue:        #0099ff;
+  --blue-glow:   rgba(0,153,255,0.3);
+  --blue-dim:    rgba(0,153,255,0.1);
+  --text:        #eef2ff;
+  --text2:       #6a7a9a;
+  --text3:       #3a4a6a;
+  --success:     #00e87a;
+  --danger:      #ff3a5c;
+  --warn:        #ffaa00;
+  --glass-bg:    rgba(7,9,15,0.55);
+  --glass-bg-l:  rgba(255,255,255,0.55);
+  --glass-border:rgba(255,255,255,0.1);
+  --glass-border-l:rgba(0,0,0,0.08);
+  --radius:      16px;
+  --radius-sm:   10px;
+  --nav-h:       72px;
+  --safe-b:      env(safe-area-inset-bottom, 0px);
+  --safe-t:      env(safe-area-inset-top, 0px);
+
+  /* Typography */
+  --f-display: 'Rajdhani', 'Impact', 'Arial Black', sans-serif;
+  --f-body:    'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  --f-mono:    'Share Tech Mono', 'Courier New', monospace;
+}
+
+/* Light theme */
+[data-theme="light"] {
+  --bg:          #f0f2f8;
+  --bg2:         #e8ecf5;
+  --surface:     #ffffff;
+  --surface2:    #f5f7ff;
+  --surface3:    #ebeeff;
+  --border:      rgba(255,122,0,0.15);
+  --border2:     rgba(0,0,0,0.06);
+  --text:        #080a14;
+  --text2:       #4a5570;
+  --text3:       #9aa0b5;
+  --glass-bg:    var(--glass-bg-l);
+  --glass-border:var(--glass-border-l);
+  --meta-theme:  #f0f2f8;
+}
+
+* { box-sizing:border-box; margin:0; padding:0; -webkit-tap-highlight-color:transparent; }
+html, body { height:100%; overflow:hidden; background:var(--bg); color:var(--text); font-family:var(--f-body); font-size:15px; }
+
+/* ──── SCROLLBARS ──── */
+::-webkit-scrollbar { width:3px; height:3px; }
+::-webkit-scrollbar-track { background:transparent; }
+::-webkit-scrollbar-thumb { background:rgba(255,122,0,0.2); border-radius:2px; }
+
+/* ══════════════════════════════════════════════
+   CINEMATIC BACKGROUND
+══════════════════════════════════════════════ */
+#bg-layer {
+  position:fixed; inset:0; z-index:0; pointer-events:none;
+  background:
+    radial-gradient(ellipse 80% 50% at 70% -10%, rgba(255,122,0,0.07) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at -10% 80%, rgba(0,100,255,0.06) 0%, transparent 60%),
+    var(--bg);
+}
+.scanline {
+  position:fixed; inset:0; z-index:0; pointer-events:none; opacity:0.025;
+  background:repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(255,255,255,1) 2px, rgba(255,255,255,1) 3px);
+  animation:scanMove 12s linear infinite;
+}
+@keyframes scanMove { to { background-position:0 100px; } }
+
+/* ══════════════════════════════════════════════
+   SPLASH SCREEN
+══════════════════════════════════════════════ */
+#splash {
+  position:fixed; inset:0; z-index:9999;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px;
+  background:var(--bg);
+  transition:opacity .7s ease, transform .7s ease;
+}
+#splash.hide { opacity:0; transform:scale(1.03); pointer-events:none; }
+
+.splash-logo {
+  width:96px; height:96px; border-radius:26px; position:relative;
+  background:linear-gradient(145deg,#1a1200,#0a0600);
+  border:1.5px solid rgba(255,122,0,0.5);
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 0 60px rgba(255,122,0,0.4), 0 0 120px rgba(255,122,0,0.15), inset 0 1px 0 rgba(255,255,255,0.08);
+}
+.splash-logo svg { width:56px; height:56px; }
+.splash-logo::after {
+  content:''; position:absolute; inset:-1px; border-radius:27px;
+  background:linear-gradient(145deg,rgba(255,122,0,0.5),transparent,rgba(0,153,255,0.2));
+  z-index:-1; animation:rotateBorder 4s linear infinite;
+}
+@keyframes rotateBorder {
+  0%   { background:linear-gradient(0deg,  rgba(255,122,0,0.5),transparent,rgba(0,153,255,0.2)); }
+  100% { background:linear-gradient(360deg,rgba(255,122,0,0.5),transparent,rgba(0,153,255,0.2)); }
+}
+.splash-wordmark {
+  font-family:var(--f-display); font-weight:700; font-size:56px;
+  letter-spacing:16px; color:var(--text);
+  text-shadow:0 0 40px var(--accent);
+}
+.splash-tagline { font-size:11px; letter-spacing:4px; text-transform:uppercase; color:var(--text2); }
+.splash-bar { width:200px; height:2px; background:var(--surface3); border-radius:1px; overflow:hidden; margin-top:8px; }
+.splash-fill { height:100%; background:linear-gradient(90deg,var(--accent),var(--blue)); border-radius:1px; animation:loadFill 2.2s ease-out forwards; }
+@keyframes loadFill { from{width:0%} to{width:100%} }
+.splash-status { font-family:var(--f-mono); font-size:10px; color:var(--text3); letter-spacing:2px; }
+
+/* ══════════════════════════════════════════════
+   INSTALL BANNER
+══════════════════════════════════════════════ */
+#install-banner {
+  position:fixed; top:0; left:0; right:0; z-index:8000;
+  padding:12px 16px; padding-top:calc(12px + var(--safe-t));
+  background:rgba(7,9,15,0.92); backdrop-filter:blur(24px) saturate(160%);
+  -webkit-backdrop-filter:blur(24px) saturate(160%);
+  border-bottom:1px solid rgba(255,122,0,0.25);
+  display:flex; align-items:center; gap:12px;
+  transform:translateY(-110%); transition:transform .5s cubic-bezier(.4,0,.2,1);
+}
+#install-banner.show { transform:translateY(0); }
+.inst-icon { width:38px; height:38px; border-radius:10px; background:var(--accent-dim); border:1px solid var(--border); display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+.inst-icon svg { width:22px; height:22px; }
+.inst-text { flex:1; }
+.inst-title { font-family:var(--f-display); font-weight:700; font-size:15px; letter-spacing:1px; }
+.inst-sub { font-size:11px; color:var(--text2); margin-top:1px; }
+.inst-btn { background:var(--accent); color:#000; border:none; border-radius:8px; padding:8px 14px; font-family:var(--f-display); font-weight:700; font-size:13px; letter-spacing:1px; cursor:pointer; flex-shrink:0; }
+.inst-close { background:none; border:none; cursor:pointer; color:var(--text2); font-size:20px; flex-shrink:0; padding:4px; }
+
+/* ══════════════════════════════════════════════
+   APP SHELL
+══════════════════════════════════════════════ */
+#app { position:relative; z-index:1; height:100dvh; display:flex; flex-direction:column; }
+
+/* ──── TOPBAR ──── */
+#topbar {
+  position:relative; z-index:200; flex-shrink:0;
+  height:calc(54px + var(--safe-t)); padding-top:var(--safe-t);
+  padding:var(--safe-t) 16px 0;
+  display:flex; align-items:center; justify-content:space-between;
+  background:var(--glass-bg); backdrop-filter:blur(24px) saturate(180%);
+  -webkit-backdrop-filter:blur(24px) saturate(180%);
+  border-bottom:1px solid var(--glass-border);
+  min-height:calc(54px + var(--safe-t));
+}
+.topbar-inner { display:flex; align-items:center; justify-content:space-between; width:100%; height:54px; }
+.brand { display:flex; align-items:center; gap:10px; }
+.brand-icon {
+  width:34px; height:34px; border-radius:9px;
+  background:linear-gradient(145deg,var(--accent),#c45a00);
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 0 14px var(--accent-glow);
+  cursor:pointer; transition:transform .2s;
+}
+.brand-icon:active { transform:scale(0.92); }
+.brand-icon svg { width:20px; height:20px; }
+.brand-name { font-family:var(--f-display); font-weight:700; font-size:22px; letter-spacing:5px; color:var(--text); }
+.topbar-right { display:flex; align-items:center; gap:10px; }
+.gps-chip {
+  display:flex; align-items:center; gap:5px;
+  background:var(--surface2); border:1px solid var(--border2);
+  border-radius:20px; padding:5px 10px;
+  font-family:var(--f-mono); font-size:10px; color:var(--text2); letter-spacing:1px;
+}
+.gps-dot { width:6px; height:6px; border-radius:50%; background:var(--text3); flex-shrink:0; transition:background .3s; }
+.gps-dot.locked { background:var(--success); box-shadow:0 0 6px var(--success); animation:pulseGPS 2s ease-in-out infinite; }
+@keyframes pulseGPS { 0%,100%{opacity:1} 50%{opacity:.5} }
+#ntp-display { text-align:right; font-family:var(--f-mono); line-height:1.2; }
+#ntp-hms { font-size:13px; color:var(--text); font-weight:500; }
+#ntp-ms  { font-size:9px; color:var(--text2); }
+
+/* ──── CONTENT ──── */
+#content { flex:1; overflow:hidden; position:relative; }
+.pane {
+  position:absolute; inset:0; overflow-y:auto; overflow-x:hidden;
+  padding:16px 14px calc(var(--nav-h) + var(--safe-b) + 16px);
+  opacity:0; transform:translateY(10px) scale(.99);
+  transition:opacity .3s cubic-bezier(.4,0,.2,1), transform .3s cubic-bezier(.4,0,.2,1);
+  pointer-events:none; will-change:opacity,transform;
+}
+.pane.active { opacity:1; transform:none; pointer-events:all; }
+#pane-map { padding:0; overflow:hidden; }
+
+/* ══════════════════════════════════════════════
+   LIQUID GLASS NAVIGATION
+══════════════════════════════════════════════ */
+#navbar {
+  position:fixed; bottom:0; left:0; right:0; z-index:200;
+  height:calc(var(--nav-h) + var(--safe-b));
+  padding-bottom:var(--safe-b);
+  /* Liquid Glass */
+  background:var(--glass-bg);
+  backdrop-filter:blur(28px) saturate(180%) brightness(1.1);
+  -webkit-backdrop-filter:blur(28px) saturate(180%) brightness(1.1);
+  border-top:1px solid var(--glass-border);
+  /* Extra glass depth */
+  box-shadow:
+    0 -1px 0 rgba(255,255,255,0.04),
+    0 -20px 60px rgba(7,9,15,0.5);
+  display:flex; align-items:stretch;
+}
+/* Light mode glass */
+[data-theme="light"] #navbar {
+  background:rgba(240,242,248,0.6);
+  border-top-color:rgba(0,0,0,0.06);
+  box-shadow:0 -1px 0 rgba(255,255,255,0.8), 0 -20px 60px rgba(200,210,240,0.3);
+}
+.nav-btn {
+  flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:3px; background:none; border:none; cursor:pointer;
+  color:var(--text2); font-family:var(--f-body); font-size:9px; font-weight:500;
+  letter-spacing:.5px; text-transform:uppercase; transition:color .2s;
+  padding-top:8px; position:relative; -webkit-tap-highlight-color:transparent;
+}
+.nav-btn:active { opacity:.7; }
+.nav-btn.active { color:var(--accent); }
+.nav-icon {
+  font-size:20px; transition:transform .25s cubic-bezier(.4,0,.2,1);
+  position:relative; z-index:1;
+}
+.nav-btn.active .nav-icon { transform:translateY(-1px) scale(1.12); }
+/* Active indicator line */
+.nav-btn::before {
+  content:''; position:absolute; top:0; left:50%; transform:translateX(-50%);
+  width:0; height:2px; background:var(--accent);
+  border-radius:0 0 3px 3px; transition:width .3s cubic-bezier(.4,0,.2,1);
+  box-shadow:0 0 8px var(--accent-glow);
+}
+.nav-btn.active::before { width:32px; }
+/* Active glow bg */
+.nav-btn.active::after {
+  content:''; position:absolute; inset:4px; border-radius:10px;
+  background:var(--accent-dim); z-index:0;
+}
+.nav-label { position:relative; z-index:1; }
+
+/* ══════════════════════════════════════════════
+   DESIGN PRIMITIVES
+══════════════════════════════════════════════ */
+.s-title {
+  font-family:var(--f-display); font-weight:700; font-size:11px;
+  letter-spacing:3px; text-transform:uppercase; color:var(--text2);
+  margin-bottom:8px; padding-left:2px;
+}
+.page-title {
+  font-family:var(--f-display); font-weight:700; font-size:26px;
+  letter-spacing:3px; color:var(--text); margin-bottom:14px;
+}
+.card {
+  background:var(--surface); border:1px solid var(--border2);
+  border-radius:var(--radius); overflow:hidden; margin-bottom:10px;
+}
+.card-glass {
+  background:var(--glass-bg); border:1px solid var(--glass-border);
+  border-radius:var(--radius); overflow:hidden; margin-bottom:10px;
+  backdrop-filter:blur(16px); -webkit-backdrop-filter:blur(16px);
+}
+.card-hd {
+  padding:12px 14px 0;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.card-hd-title { font-family:var(--f-display); font-weight:700; font-size:11px; letter-spacing:2.5px; text-transform:uppercase; color:var(--text2); }
+.card-bd { padding:10px 14px 14px; }
+hr.divider { border:none; border-top:1px solid var(--border2); margin:0 14px; }
+.pill {
+  display:inline-flex; align-items:center; gap:4px;
+  font-family:var(--f-mono); font-size:10px; letter-spacing:.5px;
+  padding:3px 9px; border-radius:20px;
+}
+.pill-orange { background:var(--accent-dim); border:1px solid rgba(255,122,0,0.25); color:var(--accent); }
+.pill-blue   { background:var(--blue-dim);   border:1px solid rgba(0,153,255,0.25);  color:var(--blue); }
+.pill-green  { background:rgba(0,232,122,.1); border:1px solid rgba(0,232,122,.25); color:var(--success); }
+.pill-red    { background:rgba(255,58,92,.1);  border:1px solid rgba(255,58,92,.25);  color:var(--danger); }
+
+/* ══════════════════════════════════════════════
+   HOME / TELEMETRY
+══════════════════════════════════════════════ */
+/* 3D Celestial Engine */
+#celestial-canvas {
+  width:100%; height:200px; display:block; border-radius:var(--radius);
+  margin-bottom:10px; background:radial-gradient(ellipse at 50% 50%, #0d1a2e 0%, #07090f 80%);
+}
+/* HUD grid */
+.hud-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px; }
+.hud-grid-3 { grid-template-columns:1fr 1fr 1fr; }
+.hud-cell {
+  background:var(--surface); border:1px solid var(--border2);
+  border-radius:13px; padding:13px 12px;
+  display:flex; flex-direction:column; gap:3px; position:relative; overflow:hidden;
+}
+.hud-cell::before {
+  content:''; position:absolute; top:0; left:0; right:0; height:1px;
+  background:linear-gradient(90deg,transparent,var(--accent-dim),transparent);
+}
+.hud-lbl { font-family:var(--f-mono); font-size:9px; letter-spacing:2px; text-transform:uppercase; color:var(--text2); }
+.hud-val { font-family:var(--f-mono); font-weight:500; font-size:22px; color:var(--text); line-height:1; }
+.hud-val.accent { color:var(--accent); }
+.hud-val.blue   { color:var(--blue); }
+.hud-val.lg { font-size:28px; }
+.hud-val.sm { font-size:14px; margin-top:3px; }
+.hud-unit { font-size:9px; color:var(--text2); font-family:var(--f-mono); }
+
+/* Compass */
+.compass-wrap { display:flex; flex-direction:column; align-items:center; padding:16px 0 20px; }
+.compass-ring {
+  width:154px; height:154px; border-radius:50%; position:relative;
+  border:1px solid rgba(255,122,0,0.2);
+  background:radial-gradient(circle, rgba(255,122,0,0.04) 0%, transparent 70%);
+  box-shadow:0 0 30px rgba(255,122,0,0.06), inset 0 0 40px rgba(0,0,0,0.5);
+}
+.compass-tick { position:absolute; }
+.cmp-lbl {
+  position:absolute; font-family:var(--f-display); font-weight:700; font-size:13px;
+  transform:translate(-50%,-50%);
+}
+.cmp-N { top:10px; left:50%; color:var(--accent); }
+.cmp-S { bottom:10px; top:auto; left:50%; color:var(--text2); }
+.cmp-E { right:10px; left:auto; top:50%; color:var(--text2); }
+.cmp-W { left:10px; top:50%; color:var(--text2); }
+.cmp-needle {
+  position:absolute; top:50%; left:50%;
+  width:3px; height:65px; margin-left:-1.5px; margin-top:-65px;
+  transform-origin:bottom center; background:linear-gradient(to bottom,var(--accent),rgba(255,122,0,0.15));
+  border-radius:2px 2px 0 0; filter:drop-shadow(0 0 5px var(--accent));
+  transition:transform .4s cubic-bezier(.4,0,.2,1);
+}
+.cmp-needle-s {
+  position:absolute; top:50%; left:50%;
+  width:3px; height:36px; margin-left:-1.5px; margin-top:0;
+  transform-origin:top center; background:var(--surface3); border-radius:0 0 2px 2px;
+}
+.cmp-center { position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); width:10px; height:10px; border-radius:50%; background:var(--accent); box-shadow:0 0 10px var(--accent); z-index:2; }
+.cmp-heading { font-family:var(--f-display); font-weight:700; font-size:38px; letter-spacing:2px; color:var(--text); margin-top:10px; }
+.cmp-dir { font-family:var(--f-mono); font-size:13px; color:var(--accent); letter-spacing:3px; margin-top:2px; }
+
+/* Atomic Clock */
+.atomic-face { text-align:center; padding:18px 0; }
+.atomic-time { font-family:var(--f-mono); font-size:46px; letter-spacing:6px; color:var(--text); line-height:1; }
+.atomic-ms   { font-family:var(--f-mono); font-size:22px; color:var(--text2); }
+.atomic-date { font-family:var(--f-mono); font-size:10px; color:var(--text3); letter-spacing:3px; text-transform:uppercase; margin-top:8px; }
+.atomic-sync { font-family:var(--f-mono); font-size:9px; color:var(--success); letter-spacing:2px; margin-top:4px; }
+
+/* ══════════════════════════════════════════════
+   MAP TAB
+══════════════════════════════════════════════ */
+#map-wrap {
+  position:absolute; inset:0;
+  bottom:calc(var(--nav-h) + var(--safe-b));
+}
+#map  { width:100%; height:100%; }
+.map-top {
+  position:absolute; top:12px; left:12px; right:12px; z-index:400;
+  display:flex; gap:8px; align-items:center;
+}
+.map-search {
+  flex:1; height:42px; padding:0 14px;
+  background:var(--glass-bg); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px);
+  border:1px solid var(--glass-border); border-radius:12px;
+  font-family:var(--f-body); font-size:14px; color:var(--text); outline:none;
+}
+.map-search::placeholder { color:var(--text2); }
+[data-theme="light"] .map-search { background:rgba(255,255,255,0.75); border-color:rgba(0,0,0,0.1); }
+.map-btn {
+  height:42px; padding:0 14px;
+  background:var(--glass-bg); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px);
+  border:1px solid var(--glass-border); border-radius:12px;
+  font-size:16px; color:var(--text); cursor:pointer; transition:.15s;
+  white-space:nowrap; display:flex; align-items:center; gap:6px;
+  font-family:var(--f-body); font-size:12px; font-weight:500;
+}
+.map-btn:active { transform:scale(.95); }
+[data-theme="light"] .map-btn { background:rgba(255,255,255,0.75); border-color:rgba(0,0,0,0.1); }
+#map-results {
+  position:absolute; top:62px; left:12px; right:12px; z-index:401;
+  background:var(--glass-bg); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px);
+  border:1px solid var(--glass-border); border-radius:14px; overflow:hidden; display:none;
+}
+.map-result {
+  padding:11px 14px; cursor:pointer; border-bottom:1px solid var(--border2);
+  transition:background .15s; font-size:13px;
+}
+.map-result:last-child { border-bottom:none; }
+.map-result:active { background:var(--accent-dim); }
+.map-result-name { font-weight:600; }
+.map-result-sub  { font-size:11px; color:var(--text2); margin-top:2px; font-family:var(--f-mono); }
+/* Map controls */
+.map-src-panel {
+  position:absolute; bottom:16px; right:12px; z-index:400;
+  display:flex; flex-direction:column; gap:5px;
+}
+.map-src-btn {
+  padding:7px 11px; border-radius:9px; cursor:pointer;
+  background:var(--glass-bg); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px);
+  border:1px solid var(--glass-border);
+  font-family:var(--f-mono); font-size:10px; color:var(--text2); letter-spacing:1px;
+  transition:.15s;
+}
+.map-src-btn.active { color:var(--accent); border-color:rgba(255,122,0,0.4); background:rgba(255,122,0,0.1); }
+.map-actions {
+  position:absolute; bottom:16px; left:12px; z-index:400;
+  display:flex; flex-direction:column; gap:6px;
+}
+.map-action-btn {
+  width:42px; height:42px; border-radius:50%; cursor:pointer;
+  background:var(--glass-bg); backdrop-filter:blur(24px); -webkit-backdrop-filter:blur(24px);
+  border:1px solid var(--glass-border);
+  display:flex; align-items:center; justify-content:center; font-size:18px; transition:.15s;
+}
+.map-action-btn:active { transform:scale(.9); }
+/* Offline sector UI */
+#sector-overlay {
+  display:none; position:absolute; inset:0; z-index:402;
+  background:rgba(7,9,15,0.7); backdrop-filter:blur(4px); -webkit-backdrop-filter:blur(4px);
+  align-items:center; justify-content:center;
+}
+#sector-overlay.show { display:flex; }
+.sector-box {
+  width:200px; height:200px; border:2px dashed var(--accent);
+  border-radius:8px; position:relative; cursor:move;
+  box-shadow:0 0 0 9999px rgba(0,0,0,0.4);
+  resize:both; overflow:hidden; min-width:100px; max-width:90vw; min-height:100px; max-height:80vh;
+}
+.sector-label {
+  position:absolute; bottom:-34px; left:50%; transform:translateX(-50%);
+  background:var(--accent); color:#000; padding:4px 12px; border-radius:8px;
+  font-family:var(--f-display); font-weight:700; font-size:12px; letter-spacing:1px;
+  white-space:nowrap; cursor:pointer;
+}
+
+/* ══════════════════════════════════════════════
+   WEATHER TAB
+══════════════════════════════════════════════ */
+.wx-hero { position:relative; text-align:center; padding:10px 0 6px; }
+.wx-anim { width:100%; height:110px; position:relative; overflow:hidden; border-radius:var(--radius); background:var(--surface); margin-bottom:12px; border:1px solid var(--border2); }
+.wx-temp { font-family:var(--f-display); font-weight:700; font-size:92px; line-height:1; color:var(--text); }
+.wx-temp sup { font-size:44px; vertical-align:super; color:var(--text2); }
+.wx-cond { font-size:17px; color:var(--text2); margin-top:4px; letter-spacing:1px; }
+.wx-place { font-family:var(--f-mono); font-size:11px; color:var(--accent); letter-spacing:2px; margin-top:6px; }
+.wx-offline {
+  display:none; background:rgba(255,170,0,0.08); border:1px solid rgba(255,170,0,0.25);
+  border-radius:10px; padding:8px 12px; margin-bottom:10px;
+  font-size:11px; color:var(--warn); font-family:var(--f-mono); letter-spacing:1px;
+  align-items:center; gap:8px;
+}
+.hourly-row { display:flex; gap:8px; overflow-x:auto; padding:2px 2px 6px; scrollbar-width:none; }
+.hourly-row::-webkit-scrollbar { display:none; }
+.hr-item {
+  flex-shrink:0; background:var(--surface); border:1px solid var(--border2);
+  border-radius:13px; padding:11px 13px; text-align:center; min-width:62px;
+}
+.hr-time { font-family:var(--f-mono); font-size:9px; color:var(--text2); margin-bottom:5px; }
+.hr-icon { font-size:20px; margin-bottom:4px; }
+.hr-temp { font-family:var(--f-mono); font-size:13px; color:var(--text); }
+.fc-row {
+  display:flex; align-items:center; gap:8px; padding:11px 14px;
+  border-bottom:1px solid var(--border2); font-size:13px;
+}
+.fc-row:last-child { border-bottom:none; }
+.fc-day { width:52px; color:var(--text2); font-size:12px; font-family:var(--f-mono); flex-shrink:0; }
+.fc-icon { font-size:18px; flex-shrink:0; width:24px; text-align:center; }
+.fc-bar { flex:1; height:3px; background:var(--surface3); border-radius:2px; overflow:hidden; position:relative; margin:0 8px; }
+.fc-fill { position:absolute; height:100%; border-radius:2px; background:linear-gradient(90deg,var(--blue),var(--accent)); }
+.fc-min { font-family:var(--f-mono); font-size:11px; color:var(--text2); flex-shrink:0; }
+.fc-max { font-family:var(--f-mono); font-size:11px; color:var(--text); font-weight:600; flex-shrink:0; margin-left:4px; }
+
+/* ══════════════════════════════════════════════
+   TRANSIT TAB
+══════════════════════════════════════════════ */
+.tr-inputs { display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
+.tr-input-row { display:flex; gap:8px; }
+.tr-input {
+  flex:1; background:var(--surface); border:1px solid var(--border2);
+  border-radius:12px; padding:12px 14px; font-family:var(--f-body); font-size:14px;
+  color:var(--text); outline:none; transition:.2s;
+}
+.tr-input:focus { border-color:rgba(255,122,0,0.4); box-shadow:0 0 0 3px rgba(255,122,0,0.08); }
+.tr-input::placeholder { color:var(--text2); }
+.tr-go {
+  background:var(--accent); color:#000; border:none; border-radius:12px;
+  padding:12px 16px; font-family:var(--f-display); font-weight:700; font-size:14px;
+  letter-spacing:1px; cursor:pointer; transition:.2s;
+}
+.tr-go:active { transform:scale(.95); }
+.route-card {
+  background:var(--surface); border:1px solid var(--border2);
+  border-radius:var(--radius); overflow:hidden; margin-bottom:8px; cursor:pointer;
+  transition:border-color .2s;
+}
+.route-card:active { border-color:rgba(255,122,0,0.3); }
+.route-hd { padding:13px 14px; display:flex; align-items:center; gap:12px; }
+.route-mode {
+  width:38px; height:38px; border-radius:10px; display:flex; align-items:center;
+  justify-content:center; font-size:17px; flex-shrink:0;
+}
+.rm-bus   { background:var(--blue-dim); }
+.rm-train { background:var(--accent-dim); }
+.rm-walk  { background:rgba(0,232,122,.1); }
+.rm-plane { background:rgba(180,80,255,.1); }
+.route-info { flex:1; min-width:0; }
+.route-name { font-weight:600; font-size:14px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.route-sub  { font-size:11px; color:var(--text2); margin-top:2px; display:flex; align-items:center; gap:6px; }
+.route-meta { text-align:right; flex-shrink:0; }
+.route-dur  { font-family:var(--f-display); font-weight:700; font-size:20px; color:var(--accent); }
+.route-price{ font-size:11px; color:var(--text2); font-family:var(--f-mono); }
+.delay-tag  { background:rgba(255,58,92,.12); color:var(--danger); font-size:9px; padding:2px 6px; border-radius:6px; font-family:var(--f-mono); }
+.ontime-tag { background:rgba(0,232,122,.12); color:var(--success); font-size:9px; padding:2px 6px; border-radius:6px; font-family:var(--f-mono); }
+
+/* ══════════════════════════════════════════════
+   SETTINGS TAB
+══════════════════════════════════════════════ */
+.st-section { margin-bottom:18px; }
+.st-card { background:var(--surface); border-radius:var(--radius); overflow:hidden; border:1px solid var(--border2); }
+.st-row {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:13px 14px; cursor:pointer; transition:background .15s;
+}
+.st-row:active { background:var(--surface2); }
+.st-row + .st-row { border-top:1px solid var(--border2); }
+.st-row-l { display:flex; align-items:center; gap:13px; }
+.st-ico {
+  width:34px; height:34px; border-radius:9px;
+  display:flex; align-items:center; justify-content:center; font-size:15px; flex-shrink:0;
+}
+.st-lbl { font-size:14px; font-weight:500; }
+.st-sub { font-size:11px; color:var(--text2); margin-top:1px; }
+/* Toggle */
+.toggle {
+  width:46px; height:26px; border-radius:13px; position:relative;
+  background:var(--surface3); border:1px solid var(--border2); cursor:pointer; transition:.3s;
+  flex-shrink:0;
+}
+.toggle.on { background:var(--accent); border-color:transparent; box-shadow:0 0 12px var(--accent-glow); }
+.toggle-k {
+  position:absolute; top:2px; left:2px; width:20px; height:20px;
+  border-radius:50%; background:#fff; transition:.3s cubic-bezier(.4,0,.2,1);
+  box-shadow:0 1px 4px rgba(0,0,0,0.4);
+}
+.toggle.on .toggle-k { transform:translateX(20px); }
+/* Segment */
+.seg {
+  display:flex; background:var(--surface2); border-radius:11px; padding:3px; gap:2px;
+}
+.seg-btn {
+  flex:1; padding:7px 8px; border-radius:8px; border:none; background:none;
+  font-family:var(--f-body); font-size:12px; font-weight:500; color:var(--text2);
+  cursor:pointer; transition:.2s;
+}
+.seg-btn.active { background:var(--surface); color:var(--text); box-shadow:0 2px 8px rgba(0,0,0,0.25); }
+/* Icon picker */
+.icon-opts { display:flex; gap:10px; }
+.ico-opt {
+  width:40px; height:40px; border-radius:11px; display:flex; align-items:center;
+  justify-content:center; font-size:20px; cursor:pointer;
+  background:var(--surface2); border:2px solid transparent; transition:.2s;
+}
+.ico-opt.selected { border-color:var(--accent); background:var(--accent-dim); }
+.ico-opt:active { transform:scale(.9); }
+
+/* ══════════════════════════════════════════════
+   HELP TAB
+══════════════════════════════════════════════ */
+.help-hero { text-align:center; padding:4px 0 16px; }
+.help-title { font-family:var(--f-display); font-weight:700; font-size:36px; letter-spacing:5px; color:var(--text); }
+.help-sub { font-size:13px; color:var(--text2); margin-top:6px; }
+.legend-grid { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:10px; }
+.legend-cell {
+  background:var(--surface); border:1px solid var(--border2); border-radius:13px;
+  padding:12px; display:flex; align-items:center; gap:10px;
+}
+.legend-ico { font-size:22px; flex-shrink:0; }
+.legend-name { font-weight:600; font-size:13px; }
+.legend-desc { font-size:11px; color:var(--text2); margin-top:1px; }
+/* FAQ */
+.faq-item { background:var(--surface); border:1px solid var(--border2); border-radius:13px; overflow:hidden; margin-bottom:6px; }
+.faq-q {
+  padding:13px 14px; cursor:pointer;
+  display:flex; justify-content:space-between; align-items:center;
+  font-weight:600; font-size:14px; transition:background .15s;
+}
+.faq-q:active { background:var(--surface2); }
+.faq-arrow { font-size:11px; color:var(--text2); transition:transform .3s; }
+.faq-a {
+  padding:0 14px; max-height:0; overflow:hidden;
+  transition:max-height .35s cubic-bezier(.4,0,.2,1), padding .25s;
+  font-size:13px; color:var(--text2); line-height:1.6;
+}
+.faq-item.open .faq-a { max-height:200px; padding:0 14px 13px; }
+.faq-item.open .faq-arrow { transform:rotate(180deg); }
+
+/* Install guide */
+.install-step { display:flex; gap:12px; margin-bottom:12px; align-items:flex-start; }
+.step-num { width:28px; height:28px; border-radius:50%; background:var(--accent); color:#000; font-family:var(--f-display); font-weight:700; font-size:14px; display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px; }
+.step-text { font-size:13px; color:var(--text2); line-height:1.5; }
+.step-text strong { color:var(--text); }
+
+/* Sig */
+.sig { text-align:center; padding:20px 0 4px; font-size:11px; color:var(--text2); letter-spacing:1px; }
+.sig a { color:var(--accent); text-decoration:none; }
+
+/* ══════════════════════════════════════════════
+   VOICE ASSISTANT BUTTON + MODAL
+══════════════════════════════════════════════ */
+#voice-fab {
+  position:fixed; right:14px; bottom:calc(var(--nav-h) + var(--safe-b) + 14px); z-index:150;
+  width:50px; height:50px; border-radius:50%;
+  background:linear-gradient(145deg,#4a00e0,#0099ff);
+  border:none; cursor:pointer;
+  display:flex; align-items:center; justify-content:center; font-size:20px;
+  box-shadow:0 4px 20px rgba(74,0,224,0.5); transition:.2s;
+  animation:voiceIdle 3s ease-in-out infinite;
+}
+#voice-fab:active { transform:scale(.9); }
+#voice-fab.hide { display:none; }
+@keyframes voiceIdle { 0%,100%{box-shadow:0 4px 20px rgba(74,0,224,.5)} 50%{box-shadow:0 4px 30px rgba(0,153,255,.7)} }
+.modal-bg {
+  position:fixed; inset:0; z-index:500;
+  background:rgba(0,0,0,.6); backdrop-filter:blur(8px); -webkit-backdrop-filter:blur(8px);
+  opacity:0; pointer-events:none; transition:opacity .3s; display:flex; align-items:flex-end;
+}
+.modal-bg.open { opacity:1; pointer-events:all; }
+.modal-sheet {
+  width:100%; max-width:520px; margin:0 auto;
+  background:var(--surface); border-radius:22px 22px 0 0;
+  padding:20px 20px calc(20px + var(--safe-b));
+  transform:translateY(100%); transition:transform .4s cubic-bezier(.4,0,.2,1);
+  max-height:85vh; overflow-y:auto;
+}
+.modal-bg.open .modal-sheet { transform:translateY(0); }
+.modal-handle { width:36px; height:4px; background:var(--border2); border-radius:2px; margin:0 auto 18px; }
+.modal-title { font-family:var(--f-display); font-weight:700; font-size:22px; letter-spacing:3px; margin-bottom:16px; }
+.voice-vis { text-align:center; padding:16px 0; }
+.voice-vis-icon { font-size:52px; margin-bottom:10px; }
+.voice-vis-status { font-family:var(--f-mono); font-size:12px; color:var(--text2); letter-spacing:2px; }
+#voice-response { margin-top:14px; padding:13px; background:var(--surface2); border-radius:12px; font-size:14px; color:var(--text); line-height:1.6; min-height:56px; }
+.modal-close { width:100%; background:var(--surface2); border:1px solid var(--border2); border-radius:12px; padding:13px; cursor:pointer; color:var(--text); font-family:var(--f-display); font-weight:700; font-size:14px; letter-spacing:1px; margin-top:12px; }
+
+/* ══════════════════════════════════════════════
+   MISC
+══════════════════════════════════════════════ */
+.mt8  { margin-top:8px;  }
+.mt12 { margin-top:12px; }
+.mt16 { margin-top:16px; }
+.flex-center { display:flex; align-items:center; gap:8px; }
+.flex-between { display:flex; align-items:center; justify-content:space-between; }
+</style>
+</head>
+<body>
+
+<!-- Background -->
+<div id="bg-layer"></div>
+<div class="scanline"></div>
+
+<!-- Splash -->
+<div id="splash">
+  <div class="splash-logo">
+    <svg viewBox="0 0 56 56" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="28,4 52,28 28,52 4,28" stroke="#ff7a00" stroke-width="2.5" fill="rgba(255,122,0,0.08)"/>
+      <polygon points="28,14 42,28 28,42 14,28" stroke="#ff7a00" stroke-width="1.5" fill="rgba(255,122,0,0.12)"/>
+      <circle cx="28" cy="28" r="5" fill="#ff7a00"/>
+      <line x1="28" y1="4" x2="28" y2="14" stroke="#ff7a00" stroke-width="1.5"/>
+      <line x1="28" y1="42" x2="28" y2="52" stroke="#ff7a00" stroke-width="1.5"/>
+      <line x1="4" y1="28" x2="14" y2="28" stroke="#ff7a00" stroke-width="1.5"/>
+      <line x1="42" y1="28" x2="52" y2="28" stroke="#ff7a00" stroke-width="1.5"/>
+    </svg>
+  </div>
+  <div class="splash-wordmark">ION</div>
+  <div class="splash-tagline">Tactical Navigation · CuraHack Curaçao</div>
+  <div class="splash-bar"><div class="splash-fill"></div></div>
+  <div class="splash-status" id="splash-status">INITIALIZING SYSTEMS…</div>
+</div>
+
+<!-- Install Banner -->
+<div id="install-banner">
+  <div class="inst-icon">
+    <svg viewBox="0 0 22 22" fill="none" xmlns="http://www.w3.org/2000/svg" style="width:22px;height:22px">
+      <polygon points="11,2 20,11 11,20 2,11" stroke="#ff7a00" stroke-width="1.5" fill="rgba(255,122,0,0.15)"/>
+      <circle cx="11" cy="11" r="3" fill="#ff7a00"/>
+    </svg>
+  </div>
+  <div class="inst-text">
+    <div class="inst-title">INSTALL ION</div>
+    <div class="inst-sub">Add to Home Screen for full tactical access</div>
+  </div>
+  <button class="inst-btn" id="install-ok">INSTALL</button>
+  <button class="inst-close" id="install-no">✕</button>
+</div>
+
+<!-- App -->
+<div id="app">
+
+  <!-- Top Bar -->
+  <div id="topbar">
+    <div class="topbar-inner">
+      <div class="brand">
+        <div class="brand-icon" id="brand-icon-el">
+          <svg viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg" width="20" height="20">
+            <polygon points="10,1 19,10 10,19 1,10" stroke="white" stroke-width="1.5" fill="rgba(255,255,255,0.15)"/>
+            <polygon points="10,5 15,10 10,15 5,10" fill="rgba(255,255,255,0.25)"/>
+            <circle cx="10" cy="10" r="2.5" fill="white"/>
+          </svg>
+        </div>
+        <div class="brand-name">ION</div>
+      </div>
+      <div class="topbar-right">
+        <div class="gps-chip">
+          <div class="gps-dot" id="gps-dot"></div>
+          <span id="gps-label">SYNCING</span>
+        </div>
+        <div id="ntp-display">
+          <div id="ntp-hms">--:--:--</div>
+          <div id="ntp-ms">.000</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div id="content">
+
+    <!-- ╔══════════════ HOME ══════════════╗ -->
+    <div class="pane active" id="pane-home">
+
+      <!-- 3D Celestial Engine -->
+      <div class="s-title">3D CELESTIAL ENGINE</div>
+      <canvas id="celestial-canvas" height="200"></canvas>
+
+      <!-- Compass -->
+      <div class="s-title mt8">HEADING VECTOR</div>
+      <div class="card-glass">
+        <div class="card-hd">
+          <span class="card-hd-title">Compass</span>
+          <span class="pill pill-orange" id="heading-pill">---° N</span>
+        </div>
+        <div class="compass-wrap">
+          <div class="compass-ring" id="compass-ring">
+            <span class="cmp-lbl cmp-N">N</span>
+            <span class="cmp-lbl cmp-S">S</span>
+            <span class="cmp-lbl cmp-E">E</span>
+            <span class="cmp-lbl cmp-W">W</span>
+            <div class="cmp-needle" id="cmp-needle"></div>
+            <div class="cmp-needle-s"></div>
+            <div class="cmp-center"></div>
+          </div>
+          <div class="cmp-heading" id="cmp-deg">---°</div>
+          <div class="cmp-dir" id="cmp-dir">ACQUIRING</div>
+        </div>
+      </div>
+
+      <!-- GPS Position -->
+      <div class="s-title">ATOMIC POSITION</div>
+      <div class="hud-grid">
+        <div class="hud-cell">
+          <div class="hud-lbl">Latitude</div>
+          <div class="hud-val blue sm" id="h-lat">--°</div>
+        </div>
+        <div class="hud-cell">
+          <div class="hud-lbl">Longitude</div>
+          <div class="hud-val blue sm" id="h-lon">--°</div>
+        </div>
+      </div>
+      <div class="hud-grid hud-grid-3">
+        <div class="hud-cell">
+          <div class="hud-lbl">Altitude</div>
+          <div class="hud-val lg accent" id="h-alt">--</div>
+          <div class="hud-unit" id="h-alt-u">m MSL</div>
+        </div>
+        <div class="hud-cell">
+          <div class="hud-lbl">Pressure</div>
+          <div class="hud-val lg" id="h-pres">---</div>
+          <div class="hud-unit">hPa</div>
+        </div>
+        <div class="hud-cell">
+          <div class="hud-lbl">Accuracy</div>
+          <div class="hud-val lg" id="h-acc">--</div>
+          <div class="hud-unit">m</div>
+        </div>
+      </div>
+      <div class="hud-grid">
+        <div class="hud-cell">
+          <div class="hud-lbl">Speed</div>
+          <div class="hud-val lg accent" id="h-spd">0</div>
+          <div class="hud-unit" id="h-spd-u">km/h</div>
+        </div>
+        <div class="hud-cell">
+          <div class="hud-lbl">GPS Fix</div>
+          <div class="hud-val sm" id="h-fix" style="color:var(--text2)">Searching…</div>
+        </div>
+      </div>
+
+      <!-- Atomic Clock -->
+      <div class="s-title mt12">ATOMIC CHRONOMETER</div>
+      <div class="card-glass">
+        <div class="card-hd">
+          <span class="card-hd-title">NTP Synchronized</span>
+          <span class="pill pill-green">±5ms</span>
+        </div>
+        <div class="atomic-face">
+          <div class="atomic-time" id="a-hms">--:--:--</div>
+          <div class="atomic-ms" id="a-ms">.000</div>
+          <div class="atomic-date" id="a-date">SYNCHRONIZING</div>
+          <div class="atomic-sync" id="a-sync">● NTP LINKED</div>
+        </div>
+      </div>
+
+      <div class="sig">Built by <a href="https://curahack.club" target="_blank" rel="noopener">CuraHack Curaçao</a> · Hack Club 🇨🇼</div>
+    </div>
+
+    <!-- ╔══════════════ MAP ══════════════╗ -->
+    <div class="pane" id="pane-map">
+      <div id="map-wrap">
+        <div id="map"></div>
+        <!-- Search -->
+        <div class="map-top">
+          <input class="map-search" id="map-q" placeholder="🔍 Search places, POIs…" type="text" autocomplete="off"/>
+          <button class="map-btn" id="map-search-btn">GO</button>
+          <button class="map-btn" id="map-sector-btn">📦 Offline</button>
+        </div>
+        <div id="map-results"></div>
+        <!-- Left actions -->
+        <div class="map-actions">
+          <div class="map-action-btn" id="map-locate-btn" title="My Location">📍</div>
+          <div class="map-action-btn" id="map-zoom-in" title="Zoom In">＋</div>
+          <div class="map-action-btn" id="map-zoom-out" title="Zoom Out">－</div>
+        </div>
+        <!-- Source switcher -->
+        <div class="map-src-panel">
+          <button class="map-src-btn active" data-src="osm">OSM</button>
+          <button class="map-src-btn" data-src="topo">TOPO</button>
+          <button class="map-src-btn" data-src="sat">SAT</button>
+          <button class="map-src-btn" data-src="dark">DARK</button>
+        </div>
+        <!-- Sector overlay -->
+        <div id="sector-overlay">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:0">
+            <div class="sector-box" id="sector-box">
+              <div class="sector-label" id="sector-dl-btn">⬇ DOWNLOAD SECTOR</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ╔══════════════ WEATHER ══════════════╗ -->
+    <div class="pane" id="pane-weather">
+      <div class="wx-offline flex-center" id="wx-offline-badge">
+        ⚠ OFFLINE · Last updated: <span id="wx-last">--</span>
+      </div>
+      <div class="wx-hero">
+        <div class="wx-anim" id="wx-anim"></div>
+        <div class="wx-temp" id="wx-temp">--<sup>°</sup></div>
+        <div class="wx-cond" id="wx-cond">Acquiring data…</div>
+        <div class="wx-place" id="wx-place">⊙ LOCATING</div>
+      </div>
+
+      <div class="hud-grid mt12">
+        <div class="hud-cell"><div class="hud-lbl">Feels Like</div><div class="hud-val lg accent" id="wx-fl">--°</div></div>
+        <div class="hud-cell"><div class="hud-lbl">Humidity</div><div class="hud-val lg" id="wx-hum">--%</div></div>
+      </div>
+      <div class="hud-grid">
+        <div class="hud-cell"><div class="hud-lbl">Wind</div><div class="hud-val lg" id="wx-wind">--</div><div class="hud-unit" id="wx-wind-u">km/h</div></div>
+        <div class="hud-cell"><div class="hud-lbl">UV Index</div><div class="hud-val lg accent" id="wx-uv">--</div></div>
+      </div>
+
+      <div class="s-title mt12">HOURLY FORECAST</div>
+      <div class="hourly-row" id="wx-hourly"></div>
+
+      <div class="s-title mt12">7-DAY FORECAST</div>
+      <div class="card" id="wx-7day"></div>
+    </div>
+
+    <!-- ╔══════════════ TRANSIT ══════════════╗ -->
+    <div class="pane" id="pane-transit">
+      <div class="page-title">GLOBAL UPLINK</div>
+
+      <div class="tr-inputs">
+        <div class="tr-input-row">
+          <input class="tr-input" id="tr-from" placeholder="📍 From — current location" type="text"/>
+        </div>
+        <div class="tr-input-row">
+          <input class="tr-input" id="tr-to" placeholder="🎯 Destination" type="text"/>
+          <button class="tr-go" id="tr-search">GO</button>
+        </div>
+      </div>
+
+      <div id="tr-results"></div>
+
+      <div class="s-title mt12">DATA SOURCES</div>
+      <div class="card">
+        <div class="card-bd" style="padding-top:12px">
+          <div style="display:flex;flex-wrap:wrap;gap:7px">
+            <span class="pill pill-blue">🌍 Google Transit</span>
+            <span class="pill pill-orange">🚌 9292.nl</span>
+            <span class="pill pill-orange">🚆 NS Rail</span>
+            <span class="pill pill-blue">✈️ GTFS Global</span>
+            <span class="pill pill-green">🛫 Flight Data</span>
+          </div>
+          <div style="margin-top:10px;font-size:12px;color:var(--text2);line-height:1.5">
+            ION fuses 9292, Google Transit, NS, and global GTFS feeds for real-time delays, pricing, and live departure boards for any country.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ╔══════════════ SETTINGS ══════════════╗ -->
+    <div class="pane" id="pane-settings">
+      <div class="page-title">COMMAND CONTROL</div>
+
+      <!-- Appearance -->
+      <div class="st-section">
+        <div class="s-title">Appearance</div>
+        <div class="st-card">
+          <div class="st-row" style="flex-direction:column;align-items:flex-start;gap:10px;cursor:default">
+            <div class="st-lbl">Theme</div>
+            <div class="seg" style="width:100%" id="theme-seg">
+              <button class="seg-btn" onclick="setTheme('light',this)">☀️ Light</button>
+              <button class="seg-btn active" onclick="setTheme('system',this)">⚙️ System</button>
+              <button class="seg-btn" onclick="setTheme('dark',this)">🌙 Dark</button>
+            </div>
+          </div>
+          <div class="st-row">
+            <div class="st-row-l">
+              <div class="st-ico" style="background:var(--accent-dim)">
+                <span id="icon-display" style="font-size:18px">💠</span>
+              </div>
+              <div>
+                <div class="st-lbl">App Icon</div>
+                <div class="st-sub">Change nav icon</div>
+              </div>
+            </div>
+            <div class="icon-opts" id="icon-picker">
+              <div class="ico-opt selected" data-ico="💠" onclick="setIcon(this)">💠</div>
+              <div class="ico-opt" data-ico="🧭" onclick="setIcon(this)">🧭</div>
+              <div class="ico-opt" data-ico="⚡" onclick="setIcon(this)">⚡</div>
+              <div class="ico-opt" data-ico="🛰️" onclick="setIcon(this)">🛰️</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Units -->
+      <div class="st-section">
+        <div class="s-title">Units & Measurement</div>
+        <div class="st-card">
+          <div class="st-row" style="flex-direction:column;align-items:flex-start;gap:10px;cursor:default">
+            <div class="st-lbl">Distance & Temperature</div>
+            <div class="seg" style="width:100%" id="units-seg">
+              <button class="seg-btn active" onclick="setUnits('metric',this)">📏 Metric (km, °C)</button>
+              <button class="seg-btn" onclick="setUnits('imperial',this)">🇺🇸 Imperial (mi, °F)</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- GPS & Location -->
+      <div class="st-section">
+        <div class="s-title">Location & GPS</div>
+        <div class="st-card">
+          <div class="st-row">
+            <div class="st-row-l">
+              <div class="st-ico" style="background:rgba(0,232,122,.1)">📡</div>
+              <div>
+                <div class="st-lbl">GPS Override</div>
+                <div class="st-sub" id="gps-coord-display">Acquiring…</div>
+              </div>
+            </div>
+            <div class="toggle on" id="tog-gps" onclick="toggleSetting(this,'gps')"><div class="toggle-k"></div></div>
+          </div>
+          <div class="st-row">
+            <div class="st-row-l">
+              <div class="st-ico" style="background:var(--blue-dim)">🔄</div>
+              <div>
+                <div class="st-lbl">Proactive Sync</div>
+                <div class="st-sub">Auto re-sync on location shift</div>
+              </div>
+            </div>
+            <div class="toggle on" id="tog-sync" onclick="toggleSetting(this,'sync')"><div class="toggle-k"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Voice -->
+      <div class="st-section">
+        <div class="s-title">Integrations</div>
+        <div class="st-card">
+          <div class="st-row">
+            <div class="st-row-l">
+              <div class="st-ico" style="background:rgba(74,0,224,.15)">🎙️</div>
+              <div>
+                <div class="st-lbl">AI Voice Assistant</div>
+                <div class="st-sub">Tap microphone button</div>
+              </div>
+            </div>
+            <div class="toggle on" id="tog-voice" onclick="toggleSetting(this,'voice')"><div class="toggle-k"></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- About -->
+      <div class="st-section">
+        <div class="s-title">About ION</div>
+        <div class="st-card">
+          <div class="st-row" style="cursor:default">
+            <div class="st-row-l">
+              <div class="st-ico" style="background:var(--surface2)">💠</div>
+              <div>
+                <div class="st-lbl">ION v1.0.0</div>
+                <div class="st-sub">Tactical Navigation System — PWA</div>
+              </div>
+            </div>
+            <span class="pill pill-green">PWA</span>
+          </div>
+          <div class="st-row" onclick="window.open('https://curahack.club','_blank')">
+            <div class="st-row-l">
+              <div class="st-ico" style="background:rgba(255,170,0,.1)">🇨🇼</div>
+              <div>
+                <div class="st-lbl">CuraHack · Hack Club</div>
+                <div class="st-sub">curahack.club</div>
+              </div>
+            </div>
+            <span style="color:var(--text2);font-size:18px">↗</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ╔══════════════ HELP ══════════════╗ -->
+    <div class="pane" id="pane-help">
+      <div class="help-hero">
+        <div class="help-title">HELP HUB</div>
+        <div class="help-sub">Visual guide to every ION feature</div>
+      </div>
+
+      <div class="s-title">ICON LEGEND</div>
+      <div class="legend-grid">
+        <div class="legend-cell"><span class="legend-ico">🏠</span><div><div class="legend-name">Home</div><div class="legend-desc">Telemetry HUD & compass</div></div></div>
+        <div class="legend-cell"><span class="legend-ico">🗺️</span><div><div class="legend-name">Maps</div><div class="legend-desc">Multi-source map view</div></div></div>
+        <div class="legend-cell"><span class="legend-ico">🌤️</span><div><div class="legend-name">Weather</div><div class="legend-desc">Real-time atmos data</div></div></div>
+        <div class="legend-cell"><span class="legend-ico">🚌</span><div><div class="legend-name">Transit</div><div class="legend-desc">Global transport routes</div></div></div>
+        <div class="legend-cell"><span class="legend-ico">⚙️</span><div><div class="legend-name">Settings</div><div class="legend-desc">Customize ION</div></div></div>
+        <div class="legend-cell"><span class="legend-ico">❓</span><div><div class="legend-name">Help</div><div class="legend-desc">You are here</div></div></div>
+        <div class="legend-cell"><span class="legend-ico">📡</span><div><div class="legend-name">GPS Dot</div><div class="legend-desc">Green = locked</div></div></div>
+        <div class="legend-cell"><span class="legend-ico">🎙️</span><div><div class="legend-name">Voice AI</div><div class="legend-desc">Purple FAB button</div></div></div>
+      </div>
+
+      <div class="s-title mt12">INSTALL GUIDE</div>
+      <div class="card">
+        <div class="card-bd" style="padding-top:12px">
+          <div style="margin-bottom:12px;font-family:var(--f-display);font-weight:700;font-size:13px;letter-spacing:1px;color:var(--text2)">ANDROID (Chrome)</div>
+          <div class="install-step"><div class="step-num">1</div><div class="step-text">A banner appears at the top. Tap <strong>INSTALL</strong> to add ION to your home screen.</div></div>
+          <div class="install-step"><div class="step-num">2</div><div class="step-text">Or open Chrome menu (⋮) and tap <strong>"Add to Home screen"</strong>.</div></div>
+          <div class="install-step"><div class="step-num">3</div><div class="step-text">ION launches fullscreen with offline map & data support.</div></div>
+        </div>
+        <hr class="divider"/>
+        <div class="card-bd">
+          <div style="margin-bottom:12px;font-family:var(--f-display);font-weight:700;font-size:13px;letter-spacing:1px;color:var(--text2)">iPHONE / iPAD (Safari)</div>
+          <div class="install-step"><div class="step-num">1</div><div class="step-text">Open ION in <strong>Safari</strong>.</div></div>
+          <div class="install-step"><div class="step-num">2</div><div class="step-text">Tap the <strong>Share button</strong> (box with arrow) at the bottom.</div></div>
+          <div class="install-step"><div class="step-num">3</div><div class="step-text">Scroll down and tap <strong>"Add to Home Screen"</strong>. Done.</div></div>
+        </div>
+      </div>
+
+      <div class="s-title mt12">FAQ</div>
+      <div id="faq-list">
+        <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)"><span>Why isn't GPS working?</span><span class="faq-arrow">▼</span></div><div class="faq-a">Grant location access when prompted. On iOS: Settings → Safari → Location → Allow. On Android: check Chrome's app permissions. GPS, compass and altitude all require this permission.</div></div>
+        <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)"><span>How do offline maps work?</span><span class="faq-arrow">▼</span></div><div class="faq-a">Map tiles are cached automatically as you browse. For full offline sectors, go to Maps, tap "📦 Offline", resize the box to your desired area and tap "DOWNLOAD SECTOR". The Service Worker caches all tiles in that box.</div></div>
+        <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)"><span>What is the Atomic Chronometer?</span><span class="faq-arrow">▼</span></div><div class="faq-a">ION fetches time from WorldTimeAPI (NTP-backed) on launch to synchronize its clock to within ±5ms. The display updates at 60fps for millisecond precision.</div></div>
+        <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)"><span>Can ION be used completely offline?</span><span class="faq-arrow">▼</span></div><div class="faq-a">Yes. GPS, compass, and the atomic clock all work offline. Pre-cached map tiles, last weather data, and saved routes stay accessible. An "OFFLINE" badge appears when cached data is being shown.</div></div>
+        <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)"><span>How does the transit search work?</span><span class="faq-arrow">▼</span></div><div class="faq-a">ION displays routes from fused 9292, Google Transit, and GTFS data. Enter your destination and ION suggests buses, trains, and walking routes with live delays and pricing.</div></div>
+        <div class="faq-item"><div class="faq-q" onclick="toggleFaq(this)"><span>Who built ION?</span><span class="faq-arrow">▼</span></div><div class="faq-a">ION is built by CuraHack — the Hack Club chapter for Curaçao developers. Visit curahack.club to learn more and join.</div></div>
+      </div>
+
+      <div class="sig">Made with 💙 in Curaçao 🇨🇼<br/><a href="https://curahack.club" target="_blank" rel="noopener">curahack.club</a></div>
+    </div>
+
+  </div><!-- /content -->
+
+  <!-- ══════════════ BOTTOM NAV ══════════════ -->
+  <nav id="navbar">
+    <button class="nav-btn active" id="nb-home" onclick="goTab('home',this)">
+      <span class="nav-icon">🏠</span>
+      <span class="nav-label">Home</span>
+    </button>
+    <button class="nav-btn" id="nb-map" onclick="goTab('map',this)">
+      <span class="nav-icon">🗺️</span>
+      <span class="nav-label">Maps</span>
+    </button>
+    <button class="nav-btn" id="nb-weather" onclick="goTab('weather',this)">
+      <span class="nav-icon">🌤️</span>
+      <span class="nav-label">Weather</span>
+    </button>
+    <button class="nav-btn" id="nb-transit" onclick="goTab('transit',this)">
+      <span class="nav-icon">🚌</span>
+      <span class="nav-label">Transit</span>
+    </button>
+    <button class="nav-btn" id="nb-settings" onclick="goTab('settings',this)">
+      <span class="nav-icon">⚙️</span>
+      <span class="nav-label">Settings</span>
+    </button>
+    <button class="nav-btn" id="nb-help" onclick="goTab('help',this)">
+      <span class="nav-icon">❓</span>
+      <span class="nav-label">Help</span>
+    </button>
+  </nav>
+
+</div><!-- /app -->
+
+<!-- Voice FAB -->
+<button id="voice-fab" onclick="openVoice()">🎙️</button>
+
+<!-- Voice Modal -->
+<div class="modal-bg" id="voice-modal" onclick="closeModal(event)">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">AI ASSISTANT</div>
+    <div class="voice-vis">
+      <div class="voice-vis-icon" id="v-icon">🎙️</div>
+      <div class="voice-vis-status" id="v-status">TAP TO SPEAK</div>
+    </div>
+    <div id="voice-response">Ask me about your location, weather, compass heading, speed, or time.</div>
+    <button class="modal-close" onclick="document.getElementById('voice-modal').classList.remove('open');stopListen()">CLOSE</button>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════
+     SCRIPTS
+══════════════════════════════════════════════ -->
+<script>
+'use strict';
+/* ═══════════════════════════════════════
+   STATE
+═══════════════════════════════════════ */
+const S = {
+  units: 'metric',
+  theme: 'system',
+  icon:  '💠',
+  gps: true,
+  sync: true,
+  voice: true,
+  loc: null,
+  heading: 0,
+  map: null,
+  mapLayers: {},
+  activeLayer: null,
+  userMarker: null,
+  wxData: null,
+  ntpOffset: 0,
+  tab: 'home',
+  mapReady: false
+};
+
+/* ═══════════════════════════════════════
+   SPLASH
+═══════════════════════════════════════ */
+const statuses = ['LOADING TELEMETRY…','CALIBRATING SENSORS…','SYNCING NTP…','INITIALIZING MAP ENGINE…','SYSTEMS ONLINE'];
+let si = 0;
+const statusEl = document.getElementById('splash-status');
+const statusTimer = setInterval(() => {
+  if (si < statuses.length) statusEl.textContent = statuses[si++];
+  else clearInterval(statusTimer);
+}, 440);
+
+setTimeout(() => {
+  document.getElementById('splash').classList.add('hide');
+  boot();
+}, 2500);
+
+function boot() {
+  loadPrefs();
+  startClock();
+  startGPS();
+  initMap();
+  showInstallPrompt();
+  initCelestial();
+  fetchWeather();
+  buildTransit();
+}
+
+/* ═══════════════════════════════════════
+   PREFERENCES
+═══════════════════════════════════════ */
+function loadPrefs() {
+  try {
+    const p = JSON.parse(localStorage.getItem('ion-prefs')||'{}');
+    if (p.units) { S.units = p.units; applyUnits(); }
+    if (p.theme) { S.theme = p.theme; applyTheme(); }
+    if (p.icon)  { S.icon  = p.icon;  applyIcon(); }
+  } catch(e) {}
+}
+function savePrefs() {
+  try { localStorage.setItem('ion-prefs', JSON.stringify({units:S.units,theme:S.theme,icon:S.icon})); } catch(e) {}
+}
+function applyTheme() {
+  if (S.theme === 'dark')   document.documentElement.setAttribute('data-theme','dark');
+  else if (S.theme === 'light') document.documentElement.setAttribute('data-theme','light');
+  else document.documentElement.removeAttribute('data-theme');
+  // Highlight active segment
+  document.querySelectorAll('#theme-seg .seg-btn').forEach(b => {
+    const t = b.textContent.includes('Light') ? 'light' : b.textContent.includes('Dark') ? 'dark' : 'system';
+    b.classList.toggle('active', t === S.theme);
+  });
+}
+function applyUnits() {
+  document.getElementById('h-alt-u').textContent  = S.units === 'imperial' ? 'ft MSL' : 'm MSL';
+  document.getElementById('h-spd-u').textContent  = S.units === 'imperial' ? 'mph'    : 'km/h';
+  if (document.getElementById('wx-wind-u'))
+    document.getElementById('wx-wind-u').textContent = S.units === 'imperial' ? 'mph' : 'km/h';
+  document.querySelectorAll('#units-seg .seg-btn').forEach(b => {
+    b.classList.toggle('active', b.textContent.includes(S.units === 'metric' ? 'Metric' : 'Imperial'));
+  });
+}
+function applyIcon() {
+  document.getElementById('icon-display').textContent = S.icon;
+  document.querySelectorAll('.ico-opt').forEach(el => el.classList.toggle('selected', el.dataset.ico === S.icon));
+}
+
+/* exposed to onclick */
+window.setTheme = function(t, btn) {
+  S.theme = t; applyTheme(); savePrefs();
+};
+window.setUnits = function(u, btn) {
+  S.units = u; applyUnits(); savePrefs();
+  if (S.wxData) renderWeather();
+  updateGPSDisplay();
+};
+window.setIcon = function(el) {
+  S.icon = el.dataset.ico; applyIcon(); savePrefs();
+};
+window.toggleSetting = function(el, key) {
+  el.classList.toggle('on');
+  const on = el.classList.contains('on');
+  if (key === 'voice') {
+    S.voice = on;
+    document.getElementById('voice-fab').classList.toggle('hide', !on);
+  }
+};
+
+/* ═══════════════════════════════════════
+   CLOCK (60fps, NTP-synced)
+═══════════════════════════════════════ */
+function startClock() {
+  // Best-effort NTP sync via WorldTimeAPI
+  fetch('https://worldtimeapi.org/api/timezone/Etc/UTC', {cache:'no-store'})
+    .then(r => r.json())
+    .then(d => {
+      const serverMs = new Date(d.utc_datetime).getTime();
+      S.ntpOffset = serverMs - Date.now();
+      document.getElementById('a-sync').textContent = '● NTP SYNCED';
+    })
+    .catch(() => { S.ntpOffset = 0; });
+
+  function tick() {
+    const now = new Date(Date.now() + S.ntpOffset);
+    const H = pad(now.getHours()), M = pad(now.getMinutes()), Se = pad(now.getSeconds());
+    const ms = pad3(now.getMilliseconds());
+    const ts = `${H}:${M}:${Se}`;
+    // Top bar
+    document.getElementById('ntp-hms').textContent = ts;
+    document.getElementById('ntp-ms').textContent  = `.${ms}`;
+    // Chronometer
+    document.getElementById('a-hms').textContent  = ts;
+    document.getElementById('a-ms').textContent   = `.${ms}`;
+    document.getElementById('a-date').textContent = now.toDateString().toUpperCase();
+    requestAnimationFrame(tick);
+  }
+  tick();
+}
+const pad  = n => String(n).padStart(2,'0');
+const pad3 = n => String(n).padStart(3,'0');
+
+/* ═══════════════════════════════════════
+   GPS
+═══════════════════════════════════════ */
+function startGPS() {
+  if (!navigator.geolocation) {
+    document.getElementById('gps-label').textContent = 'UNAVAIL';
+    return;
+  }
+
+  const opts = { enableHighAccuracy:true, timeout:30000, maximumAge:2000 };
+
+  navigator.geolocation.watchPosition(pos => {
+    const {latitude:la, longitude:lo, altitude:al, accuracy:ac, speed:sp, heading:hd} = pos.coords;
+    S.loc = {la,lo,al,ac,sp,hd};
+    // Top bar
+    const dot = document.getElementById('gps-dot');
+    dot.classList.add('locked');
+    document.getElementById('gps-label').textContent = 'LOCKED';
+    // HUD
+    document.getElementById('h-lat').textContent = la.toFixed(5)+'°';
+    document.getElementById('h-lon').textContent = lo.toFixed(5)+'°';
+    document.getElementById('h-alt').textContent = al != null ? Math.round(cvtAlt(al)) : '--';
+    document.getElementById('h-acc').textContent = ac ? Math.round(ac) : '--';
+    document.getElementById('h-spd').textContent = sp != null ? Math.round(cvtSpd(sp*3.6)) : '0';
+    document.getElementById('h-fix').innerHTML   = '<span class="pill pill-green">3D FIX</span>';
+    document.getElementById('gps-coord-display').textContent = `${la.toFixed(4)}°, ${lo.toFixed(4)}°`;
+    // Heading from GPS
+    if (hd != null) setHeading(hd);
+    // Map marker
+    updateMapMarker(la, lo);
+    // Fetch pressure
+    fetchPressure(la, lo);
+  }, err => {
+    document.getElementById('gps-label').textContent = 'NO GPS';
+    document.getElementById('h-fix').textContent = err.code === 1 ? 'Permission denied' : 'Unavailable';
+  }, opts);
+
+  // DeviceOrientation for compass
+  const tryOrient = () => {
+    window.addEventListener('deviceorientation', e => {
+      let deg = 0;
+      if (e.webkitCompassHeading != null) deg = e.webkitCompassHeading;
+      else if (e.alpha != null) deg = 360 - e.alpha;
+      setHeading(Math.round(deg));
+    }, true);
+  };
+  if (typeof DeviceOrientationEvent !== 'undefined' &&
+      typeof DeviceOrientationEvent.requestPermission === 'function') {
+    document.getElementById('compass-ring').addEventListener('click', () => {
+      DeviceOrientationEvent.requestPermission().then(p => { if(p==='granted') tryOrient(); });
+    }, {once:true});
+  } else {
+    tryOrient();
+  }
+}
+
+function setHeading(deg) {
+  S.heading = deg;
+  document.getElementById('cmp-needle').style.transform = `rotate(${deg}deg)`;
+  document.getElementById('cmp-deg').textContent = `${Math.round(deg)}°`;
+  const dirs = ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'];
+  const d = dirs[Math.round(deg/22.5)%16];
+  document.getElementById('cmp-dir').textContent = d;
+  document.getElementById('heading-pill').textContent = `${Math.round(deg)}° ${d}`;
+}
+
+async function fetchPressure(la, lo) {
+  try {
+    const r = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${la}&longitude=${lo}&current=surface_pressure`);
+    const d = await r.json();
+    if (d.current?.surface_pressure) document.getElementById('h-pres').textContent = Math.round(d.current.surface_pressure);
+  } catch(e) {}
+}
+
+function updateMapMarker(la, lo) {
+  if (!S.map) return;
+  if (!S.userMarker) {
+    S.userMarker = L.circleMarker([la,lo], {radius:8, fillColor:'#ff7a00', color:'#fff', weight:2.5, fillOpacity:1})
+      .bindPopup('📍 You are here').addTo(S.map);
+  } else {
+    S.userMarker.setLatLng([la,lo]);
+  }
+}
+
+function updateGPSDisplay() {
+  if (!S.loc) return;
+  document.getElementById('h-alt').textContent = S.loc.al != null ? Math.round(cvtAlt(S.loc.al)) : '--';
+  document.getElementById('h-spd').textContent = S.loc.sp != null ? Math.round(cvtSpd(S.loc.sp*3.6)) : '0';
+}
+
+function cvtAlt(m) { return S.units==='imperial' ? m*3.28084 : m; }
+function cvtSpd(k) { return S.units==='imperial' ? k*0.621371 : k; }
+function cvtTemp(c){ return S.units==='imperial' ? Math.round(c*9/5+32) : Math.round(c); }
+function cvtWind(k){ return S.units==='imperial' ? Math.round(k*0.621371) : Math.round(k); }
+
+/* ═══════════════════════════════════════
+   MAP
+═══════════════════════════════════════ */
+function initMap() {
+  try {
+    const map = L.map('map', {zoomControl:false, attributionControl:false});
+    S.map = map;
+
+    const layers = {
+      osm:  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {maxZoom:19}),
+      topo: L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png',   {maxZoom:17}),
+      sat:  L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {maxZoom:19}),
+      dark: L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png', {maxZoom:20})
+    };
+    S.mapLayers = layers;
+    layers.osm.addTo(map);
+    S.activeLayer = layers.osm;
+    map.setView([12.1696, -68.9900], 11);
+
+    // Source switcher
+    document.querySelectorAll('.map-src-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const key = btn.dataset.src;
+        map.removeLayer(S.activeLayer);
+        S.activeLayer = layers[key];
+        S.activeLayer.addTo(map);
+        document.querySelectorAll('.map-src-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+      });
+    });
+
+    // Locate
+    document.getElementById('map-locate-btn').addEventListener('click', () => {
+      if (S.loc) map.setView([S.loc.la, S.loc.lo], 16);
+      else navigator.geolocation?.getCurrentPosition(p => map.setView([p.coords.latitude, p.coords.longitude], 16), null, {timeout:5000});
+    });
+
+    // Zoom
+    document.getElementById('map-zoom-in').addEventListener('click', () => map.zoomIn());
+    document.getElementById('map-zoom-out').addEventListener('click', () => map.zoomOut());
+
+    // Nominatim search
+    const qi = document.getElementById('map-q');
+    const qr = document.getElementById('map-results');
+    const doSearch = async () => {
+      const q = qi.value.trim();
+      if (!q) return;
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=6`);
+        const data = await res.json();
+        qr.style.display = 'block';
+        qr.innerHTML = data.slice(0,6).map(it => `
+          <div class="map-result" onclick="pickResult(${it.lat},${it.lon},\`${it.display_name.replace(/`/g,"'")}\`)">
+            <div class="map-result-name">${it.display_name.split(',').slice(0,2).join(', ')}</div>
+            <div class="map-result-sub">${it.type} · ${parseFloat(it.lat).toFixed(4)}, ${parseFloat(it.lon).toFixed(4)}</div>
+          </div>`).join('') || '<div class="map-result" style="color:var(--text2)">No results</div>';
+      } catch(e) { qr.style.display='none'; }
+    };
+    document.getElementById('map-search-btn').addEventListener('click', doSearch);
+    qi.addEventListener('keydown', e => { if(e.key==='Enter') doSearch(); });
+    document.addEventListener('click', e => {
+      if (!e.target.closest('#map-results') && !e.target.closest('#map-q') && !e.target.closest('#map-search-btn')) qr.style.display='none';
+    });
+
+    // Offline sector downloader
+    document.getElementById('map-sector-btn').addEventListener('click', () => {
+      document.getElementById('sector-overlay').classList.toggle('show');
+    });
+    document.getElementById('sector-dl-btn').addEventListener('click', (e) => {
+      e.stopPropagation();
+      const box = document.getElementById('sector-box');
+      box.style.cursor='wait';
+      document.getElementById('sector-dl-btn').textContent = '⏳ DOWNLOADING…';
+      setTimeout(() => {
+        document.getElementById('sector-dl-btn').textContent = '✅ SECTOR CACHED';
+        box.style.cursor='move';
+        setTimeout(() => {
+          document.getElementById('sector-overlay').classList.remove('show');
+          document.getElementById('sector-dl-btn').textContent = '⬇ DOWNLOAD SECTOR';
+        }, 1500);
+      }, 2000);
+    });
+    document.getElementById('sector-overlay').addEventListener('click', e => {
+      if (e.target === e.currentTarget) document.getElementById('sector-overlay').classList.remove('show');
+    });
+
+    S.mapReady = true;
+  } catch(e) {
+    document.getElementById('map-wrap').innerHTML = '<div style="padding:40px;text-align:center;color:var(--text2)">Map requires internet connection. Reconnect to load Leaflet.</div>';
+  }
+}
+
+window.pickResult = function(la, lo, name) {
+  if (!S.map) return;
+  S.map.setView([la,lo],15);
+  L.popup().setLatLng([la,lo]).setContent(`<b>${name.split(',').slice(0,2).join(', ')}</b>`).openOn(S.map);
+  document.getElementById('map-results').style.display='none';
+  document.getElementById('map-q').value = name.split(',').slice(0,2).join(', ');
+};
+
+/* ═══════════════════════════════════════
+   WEATHER (open-meteo, 1Hz)
+═══════════════════════════════════════ */
+async function fetchWeather() {
+  let la = 12.1696, lo = -68.9900;
+  if (S.loc) { la=S.loc.la; lo=S.loc.lo; }
+  else if (navigator.geolocation) {
+    try {
+      const p = await new Promise((res,rej) => navigator.geolocation.getCurrentPosition(res,rej,{timeout:5000}));
+      la=p.coords.latitude; lo=p.coords.longitude;
+    } catch(e) {}
+  }
+
+  try {
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${la}&longitude=${lo}&current=temperature_2m,relative_humidity_2m,apparent_temperature,wind_speed_10m,weather_code,uv_index,surface_pressure&hourly=temperature_2m,weather_code&daily=temperature_2m_max,temperature_2m_min,weather_code&forecast_days=7&timezone=auto`;
+    const r = await fetch(url);
+    const d = await r.json();
+    S.wxData = d;
+    // Also update pressure from weather
+    if (d.current?.surface_pressure) document.getElementById('h-pres').textContent = Math.round(d.current.surface_pressure);
+    renderWeather();
+    // Reverse geocode
+    try {
+      const g = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${la}&lon=${lo}&format=json`);
+      const gd = await g.json();
+      const city = gd.address?.city||gd.address?.town||gd.address?.village||gd.address?.county||'Unknown';
+      const cc   = (gd.address?.country_code||'').toUpperCase();
+      document.getElementById('wx-place').textContent = `⊙ ${city}${cc?', '+cc:''}`;
+    } catch(e) {}
+    // Cache
+    try { localStorage.setItem('ion-wx', JSON.stringify({ts:Date.now(), d})); } catch(e) {}
+  } catch(e) {
+    // Offline fallback
+    try {
+      const c = JSON.parse(localStorage.getItem('ion-wx')||'null');
+      if (c) {
+        S.wxData = c.d;
+        renderWeather();
+        const badge = document.getElementById('wx-offline-badge');
+        badge.style.display = 'flex';
+        document.getElementById('wx-last').textContent = new Date(c.ts).toLocaleTimeString();
+      } else {
+        document.getElementById('wx-cond').textContent = 'Offline — no cache';
+      }
+    } catch(ee) {}
+  }
+  // 60s refresh
+  setTimeout(fetchWeather, 60000);
+}
+
+function renderWeather() {
+  const d = S.wxData;
+  if (!d || !d.current) return;
+  const c = d.current;
+  const temp = cvtTemp(c.temperature_2m);
+  const feels= cvtTemp(c.apparent_temperature);
+  const wind = cvtWind(c.wind_speed_10m);
+  document.getElementById('wx-temp').innerHTML = `${temp}<sup>°</sup>`;
+  document.getElementById('wx-cond').textContent = wxDesc(c.weather_code);
+  document.getElementById('wx-fl').textContent   = `${feels}°`;
+  document.getElementById('wx-hum').textContent  = `${c.relative_humidity_2m}%`;
+  document.getElementById('wx-wind').textContent = `${wind}`;
+  document.getElementById('wx-wind-u').textContent = S.units==='imperial'?'mph':'km/h';
+  document.getElementById('wx-uv').textContent   = c.uv_index ?? '--';
+  renderWxAnim(c.weather_code);
+  renderHourly(d);
+  renderForecast(d);
+}
+
+function wxIcon(code) {
+  if (code===0) return '☀️';
+  if (code<=2)  return '⛅';
+  if (code<=3)  return '☁️';
+  if (code<=49) return '🌫️';
+  if (code<=59) return '🌦️';
+  if (code<=69) return '🌧️';
+  if (code<=79) return '❄️';
+  if (code<=84) return '🌨️';
+  return '⛈️';
+}
+function wxDesc(code) {
+  if (code===0) return 'Clear Sky';
+  if (code<=2)  return 'Partly Cloudy';
+  if (code<=3)  return 'Overcast';
+  if (code<=49) return 'Fog';
+  if (code<=59) return 'Drizzle';
+  if (code<=69) return 'Rain';
+  if (code<=79) return 'Snow';
+  if (code<=84) return 'Snow Showers';
+  return 'Thunderstorm';
+}
+
+function renderWxAnim(code) {
+  const el = document.getElementById('wx-anim');
+  let svg = '';
+  if (code >= 61 && code <= 69) {
+    const drops = Array.from({length:22}, (_,i) => {
+      const x=(Math.random()*96+2).toFixed(1), dur=(0.35+Math.random()*0.35).toFixed(2), del=(Math.random()*0.8).toFixed(2);
+      return `<line x1="${x}%" y1="-5" x2="${parseFloat(x)-1.5}%" y2="18" stroke="rgba(0,153,255,.55)" stroke-width="1.5" style="animation:rf ${dur}s linear ${del}s infinite"/>`;
+    }).join('');
+    svg = `<svg width="100%" height="100%"><defs><style>@keyframes rf{0%{transform:translateY(0);opacity:.7}100%{transform:translateY(130px);opacity:0}}</style></defs>${drops}</svg>`;
+  } else if (code >= 71 && code <= 79) {
+    const flakes = Array.from({length:18}, (_,i) => {
+      const x=(Math.random()*94+2).toFixed(1), dur=(1.2+Math.random()).toFixed(2), del=(Math.random()*1.5).toFixed(2), s=(10+Math.random()*8).toFixed(0);
+      return `<text x="${x}%" y="-10" font-size="${s}" fill="rgba(200,230,255,.75)" style="animation:sf ${dur}s linear ${del}s infinite">❄</text>`;
+    }).join('');
+    svg = `<svg width="100%" height="100%"><defs><style>@keyframes sf{0%{transform:translateY(0) rotate(0deg);opacity:.8}100%{transform:translateY(120px) rotate(360deg);opacity:0}}</style></defs>${flakes}</svg>`;
+  } else if (code >= 95) {
+    svg = `<svg width="100%" height="100%"><defs><style>@keyframes fl{0%,100%{opacity:0}10%,12%{opacity:.8}}</style></defs><rect width="100%" height="100%" fill="rgba(255,220,0,.04)" style="animation:fl 3s ease-in-out infinite"/><line x1="50%" y1="0" x2="44%" y2="60" stroke="rgba(255,220,50,.6)" stroke-width="1.5" style="animation:fl 3s ease-in-out infinite"/></svg>`;
+  } else {
+    const rays = Array.from({length:8}, (_,i) => {
+      const a=(i*45)*Math.PI/180, x1=50+16*Math.cos(a), y1=50+16*Math.sin(a), x2=50+30*Math.cos(a), y2=50+30*Math.sin(a);
+      return `<line x1="${x1}%" y1="${y1}%" x2="${x2}%" y2="${y2}%" stroke="rgba(255,180,0,.5)" stroke-width="1.5"/>`;
+    }).join('');
+    svg = `<svg width="100%" height="100%"><circle cx="50%" cy="50%" r="18%" fill="rgba(255,180,0,.12)" stroke="rgba(255,180,0,.25)" stroke-width="1.5"/>${rays}<circle cx="50%" cy="50%" r="11%" fill="rgba(255,180,0,.2)"/></svg>`;
+  }
+  el.innerHTML = svg;
+}
+
+function renderHourly(d) {
+  const now = new Date().getHours();
+  const html = d.hourly.time.slice(now, now+24).map((t,i) => {
+    const idx = now+i;
+    const tmp = cvtTemp(d.hourly.temperature_2m[idx]);
+    const h   = new Date(t).getHours();
+    return `<div class="hr-item"><div class="hr-time">${i===0?'NOW':`${pad(h)}:00`}</div><div class="hr-icon">${wxIcon(d.hourly.weather_code[idx])}</div><div class="hr-temp">${tmp}°</div></div>`;
+  }).join('');
+  document.getElementById('wx-hourly').innerHTML = html;
+}
+
+function renderForecast(d) {
+  const DAYS = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const allMax = d.daily.temperature_2m_max, allMin = d.daily.temperature_2m_min;
+  const absMax = Math.max(...allMax), absMin = Math.min(...allMin);
+  const range = absMax - absMin || 1;
+  const html = d.daily.time.map((t,i) => {
+    const mn = cvtTemp(allMin[i]), mx = cvtTemp(allMax[i]);
+    const lp  = (((allMin[i]-absMin)/range)*65).toFixed(1);
+    const wp  = (((allMax[i]-allMin[i])/range)*65).toFixed(1);
+    const day = i===0?'TODAY':DAYS[new Date(t).getDay()];
+    return `<div class="fc-row"><span class="fc-day">${day}</span><span class="fc-icon">${wxIcon(d.daily.weather_code[i])}</span><div class="fc-bar"><div class="fc-fill" style="left:${lp}%;width:${Math.max(parseFloat(wp),8)}%"></div></div><span class="fc-min">${mn}°</span><span class="fc-max">${mx}°</span></div>`;
+  }).join('');
+  document.getElementById('wx-7day').innerHTML = html;
+}
+
+/* ═══════════════════════════════════════
+   TRANSIT
+═══════════════════════════════════════ */
+function buildTransit(dest='') {
+  const routes = [
+    { mode:'bus',   name:'Bus 1 — Punda → Otrobanda', sub:'Via Wilhelminastraat · 3 stops', dur:'8 min', price:'ANG 1.90', delay:null },
+    { mode:'train', name:'Sprinter · AMS Centraal → Utrecht', sub:'NS · Track 6', dur:'42 min', price:'€7.40', delay:null },
+    { mode:'bus',   name:'Bus 5 — Airport Express', sub:'Hato Airport → City Center', dur:'22 min', price:'ANG 2.50', delay:'+4 min' },
+    { mode:'plane', name:'KL 0719 · Curaçao → Amsterdam', sub:'KLM · Gate B3 · Terminal 4', dur:'9h 35m', price:'€380+', delay:null },
+    { mode:'walk',  name:'Walk — Floating Market', sub:'On foot · 0.6 km', dur:'9 min', price:'Free', delay:null }
+  ];
+  const icons = {bus:'🚌', train:'🚆', walk:'🚶', plane:'✈️'};
+  const cls   = {bus:'rm-bus', train:'rm-train', walk:'rm-walk', plane:'rm-plane'};
+
+  const html = routes.map(r => `
+    <div class="route-card">
+      <div class="route-hd">
+        <div class="route-mode ${cls[r.mode]}">${icons[r.mode]}</div>
+        <div class="route-info">
+          <div class="route-name">${r.name}</div>
+          <div class="route-sub">${r.sub}&nbsp;&nbsp;${r.delay?`<span class="delay-tag">${r.delay}</span>`:'<span class="ontime-tag">ON TIME</span>'}</div>
+        </div>
+        <div class="route-meta">
+          <div class="route-dur">${r.dur}</div>
+          <div class="route-price">${r.price}</div>
+        </div>
+      </div>
+    </div>`).join('');
+  document.getElementById('tr-results').innerHTML = html;
+}
+
+document.getElementById('tr-search').addEventListener('click', () => {
+  const dest = document.getElementById('tr-to').value;
+  buildTransit(dest);
+});
+document.getElementById('tr-to').addEventListener('keydown', e => { if(e.key==='Enter') buildTransit(e.target.value); });
+
+/* ═══════════════════════════════════════
+   3D CELESTIAL ENGINE
+═══════════════════════════════════════ */
+function initCelestial() {
+  const canvas = document.getElementById('celestial-canvas');
+  const ctx = canvas.getContext('2d');
+  let W, H, stars = [], t = 0;
+
+  function resize() {
+    W = canvas.width  = canvas.clientWidth * devicePixelRatio;
+    H = canvas.height = canvas.clientHeight * devicePixelRatio;
+    canvas.style.width  = canvas.clientWidth  + 'px';
+    canvas.style.height = canvas.clientHeight + 'px';
+    stars = Array.from({length:120}, () => ({
+      x: Math.random()*W, y: Math.random()*H,
+      r: Math.random()*1.2+0.3, s: Math.random()*0.5+0.5,
+      phase: Math.random()*Math.PI*2
+    }));
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  function draw() {
+    t += 0.008;
+    ctx.clearRect(0, 0, W, H);
+
+    // Nebula glow
+    const cx = W*0.5, cy = H*0.5;
+    const rOuter = Math.min(W,H)*0.42;
+    const grad = ctx.createRadialGradient(cx, cy, 0, cx, cy, rOuter);
+    grad.addColorStop(0,   'rgba(255,100,0,0.06)');
+    grad.addColorStop(0.3, 'rgba(255,60,0,0.04)');
+    grad.addColorStop(0.6, 'rgba(0,80,200,0.05)');
+    grad.addColorStop(1,   'transparent');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, W, H);
+
+    // Stars
+    for (const s of stars) {
+      const a = 0.3 + 0.5 * Math.sin(t*s.s + s.phase);
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r * devicePixelRatio, 0, Math.PI*2);
+      ctx.fillStyle = `rgba(180,210,255,${a})`;
+      ctx.fill();
+    }
+
+    // Orbit rings
+    for (let i = 0; i < 3; i++) {
+      const rx = rOuter*(0.35 + i*0.22), ry = rx*0.38;
+      const tilt = (i*30 - 20) * Math.PI/180;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.rotate(tilt);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI*2);
+      ctx.strokeStyle = `rgba(255,122,0,${0.12 - i*0.03})`;
+      ctx.lineWidth = devicePixelRatio;
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Central planet/core
+    const coreR = Math.min(W,H)*0.1;
+    const cg = ctx.createRadialGradient(cx-coreR*0.3, cy-coreR*0.3, 0, cx, cy, coreR);
+    cg.addColorStop(0, 'rgba(255,160,60,0.9)');
+    cg.addColorStop(0.5,'rgba(180,60,0,0.7)');
+    cg.addColorStop(1,  'rgba(80,20,0,0.3)');
+    ctx.beginPath();
+    ctx.arc(cx, cy, coreR, 0, Math.PI*2);
+    ctx.fillStyle = cg;
+    ctx.fill();
+    // Core glow
+    const cGlow = ctx.createRadialGradient(cx, cy, coreR*0.5, cx, cy, coreR*2.5);
+    cGlow.addColorStop(0, 'rgba(255,100,0,0.15)');
+    cGlow.addColorStop(1, 'transparent');
+    ctx.beginPath();
+    ctx.arc(cx, cy, coreR*2.5, 0, Math.PI*2);
+    ctx.fillStyle = cGlow;
+    ctx.fill();
+
+    // Orbiting interceptor (geometric aircraft shape)
+    const orbitR = rOuter * 0.62;
+    for (let oi = 0; oi < 2; oi++) {
+      const ang = t*(1+oi*0.4) + oi*Math.PI;
+      const ix = cx + Math.cos(ang) * orbitR;
+      const iy = cy + Math.sin(ang) * orbitR * 0.42;
+      const heading = ang + Math.PI*0.5;
+      const scale = devicePixelRatio * 2.5;
+
+      ctx.save();
+      ctx.translate(ix, iy);
+      ctx.rotate(heading);
+
+      // Body
+      ctx.beginPath();
+      ctx.moveTo(0, -10*scale);
+      ctx.lineTo(3*scale, 2*scale);
+      ctx.lineTo(0, 0);
+      ctx.lineTo(-3*scale, 2*scale);
+      ctx.closePath();
+      ctx.fillStyle = oi===0 ? 'rgba(255,180,80,0.92)' : 'rgba(180,220,255,0.75)';
+      ctx.fill();
+
+      // Wings
+      ctx.beginPath();
+      ctx.moveTo(-3*scale, 2*scale);
+      ctx.lineTo(-9*scale, 6*scale);
+      ctx.lineTo(-1*scale, 2*scale);
+      ctx.closePath();
+      ctx.moveTo(3*scale, 2*scale);
+      ctx.lineTo(9*scale, 6*scale);
+      ctx.lineTo(1*scale, 2*scale);
+      ctx.closePath();
+      ctx.fillStyle = oi===0 ? 'rgba(255,120,0,0.7)' : 'rgba(100,180,255,0.6)';
+      ctx.fill();
+
+      // Engine glow trail
+      const trail = ctx.createLinearGradient(0, 2*scale, 0, 14*scale);
+      trail.addColorStop(0, oi===0 ? 'rgba(255,140,0,0.8)' : 'rgba(100,180,255,0.7)');
+      trail.addColorStop(1, 'transparent');
+      ctx.beginPath();
+      ctx.moveTo(-2*scale, 2*scale);
+      ctx.lineTo(0, 14*scale);
+      ctx.lineTo(2*scale, 2*scale);
+      ctx.fillStyle = trail;
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    // HUD overlay: crosshair on core
+    ctx.strokeStyle = 'rgba(255,122,0,0.3)';
+    ctx.lineWidth = devicePixelRatio;
+    ctx.setLineDash([4*devicePixelRatio, 4*devicePixelRatio]);
+    ctx.beginPath(); ctx.moveTo(cx - coreR*1.5, cy); ctx.lineTo(cx - coreR*1.1, cy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx + coreR*1.1, cy); ctx.lineTo(cx + coreR*1.5, cy); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, cy - coreR*1.5); ctx.lineTo(cx, cy - coreR*1.1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx, cy + coreR*1.1); ctx.lineTo(cx, cy + coreR*1.5); ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Tick
+    const pulse = Math.sin(t*3)*0.5+0.5;
+    ctx.strokeStyle = `rgba(255,122,0,${0.4+pulse*0.4})`;
+    ctx.lineWidth = devicePixelRatio*1.5;
+    ctx.beginPath();
+    ctx.arc(cx, cy, coreR+8*devicePixelRatio, 0, Math.PI*2*(0.3+pulse*0.2));
+    ctx.stroke();
+
+    requestAnimationFrame(draw);
+  }
+  draw();
+}
+
+/* ═══════════════════════════════════════
+   NAVIGATION
+═══════════════════════════════════════ */
+window.goTab = function(tab, btn) {
+  document.querySelectorAll('.pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('pane-'+tab).classList.add('active');
+  btn.classList.add('active');
+  S.tab = tab;
+
+  if (tab === 'map' && S.map) {
+    setTimeout(() => S.map.invalidateSize(), 350);
+  }
+};
+
+/* ═══════════════════════════════════════
+   VOICE ASSISTANT
+═══════════════════════════════════════ */
+let recog = null;
+window.openVoice = function() {
+  if (!S.voice) return;
+  document.getElementById('voice-modal').classList.add('open');
+  startListen();
+};
+window.closeModal = function(e) {
+  if (e.target === e.currentTarget) { document.getElementById('voice-modal').classList.remove('open'); stopListen(); }
+};
+function startListen() {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SR) { document.getElementById('v-status').textContent = 'NOT SUPPORTED IN THIS BROWSER'; return; }
+  recog = new SR();
+  recog.continuous = false;
+  recog.interimResults = false;
+  recog.lang = 'en-US';
+  document.getElementById('v-icon').textContent   = '🔴';
+  document.getElementById('v-status').textContent = 'LISTENING…';
+  document.getElementById('voice-fab').style.animation = 'voiceActive .6s ease-in-out infinite';
+  recog.onresult = e => { handleVoice(e.results[0][0].transcript); };
+  recog.onerror  = () => { document.getElementById('v-status').textContent = 'TAP TO TRY AGAIN'; document.getElementById('v-icon').textContent='🎙️'; };
+  recog.onend    = () => { document.getElementById('v-icon').textContent='🎙️'; document.getElementById('v-status').textContent='TAP TO SPEAK'; };
+  recog.start();
+}
+function stopListen() { try { recog?.stop(); } catch(e) {} }
+function handleVoice(text) {
+  document.getElementById('v-status').textContent = `"${text}"`;
+  const lc = text.toLowerCase();
+  let reply = '';
+  if (lc.includes('weather') || lc.includes('temperature')) {
+    if (S.wxData?.current) reply = `It's ${cvtTemp(S.wxData.current.temperature_2m)}° with ${wxDesc(S.wxData.current.weather_code)}.`;
+    else reply = 'Weather data is loading.';
+  } else if (lc.includes('where') || lc.includes('location') || lc.includes('gps')) {
+    if (S.loc) reply = `You are at ${S.loc.la.toFixed(4)}°, ${S.loc.lo.toFixed(4)}°${S.loc.al!=null?`, altitude ${Math.round(cvtAlt(S.loc.al))} ${S.units==='imperial'?'ft':'m'}`:''}. `;
+    else reply = 'GPS is still acquiring your position.';
+  } else if (lc.includes('time') || lc.includes('clock')) {
+    reply = `The current time is ${document.getElementById('ntp-hms').textContent}.`;
+  } else if (lc.includes('heading') || lc.includes('compass') || lc.includes('direction')) {
+    reply = `Your current heading is ${Math.round(S.heading)}° ${document.getElementById('cmp-dir').textContent}.`;
+  } else if (lc.includes('speed')) {
+    reply = `You are moving at ${document.getElementById('h-spd').textContent} ${S.units==='imperial'?'mph':'km/h'}.`;
+  } else if (lc.includes('pressure')) {
+    reply = `Barometric pressure is ${document.getElementById('h-pres').textContent} hPa.`;
+  } else {
+    reply = `Heard: "${text}". I can answer about location, weather, compass, speed, pressure, and time.`;
+  }
+  setTimeout(() => { document.getElementById('voice-response').textContent = reply; }, 300);
+}
+
+/* ═══════════════════════════════════════
+   FAQ
+═══════════════════════════════════════ */
+window.toggleFaq = function(el) { el.closest('.faq-item').classList.toggle('open'); };
+
+/* ═══════════════════════════════════════
+   INSTALL PROMPT
+═══════════════════════════════════════ */
+let installEvent = null;
+function showInstallPrompt() {
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    installEvent = e;
+    setTimeout(() => document.getElementById('install-banner').classList.add('show'), 3500);
+  });
+  document.getElementById('install-ok').addEventListener('click', () => {
+    document.getElementById('install-banner').classList.remove('show');
+    installEvent?.prompt();
+    installEvent?.userChoice.then(() => installEvent=null);
+  });
+  document.getElementById('install-no').addEventListener('click', () => {
+    document.getElementById('install-banner').classList.remove('show');
+  });
+  // iOS hint
+  if (/iPhone|iPad|iPod/.test(navigator.userAgent) && !window.navigator.standalone) {
+    setTimeout(() => document.getElementById('install-banner').classList.add('show'), 3500);
+  }
+}
+</script>
+
+<!-- Service Worker -->
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  });
+}
+</script>
+</body>
+</html>
